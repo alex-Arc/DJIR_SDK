@@ -12,7 +12,9 @@
 .vs/
 .vscode/
 out/
+.pio/
 
 CMakeSettings.json
 
 *.psd
+
