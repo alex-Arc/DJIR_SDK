@@ -9,6 +9,8 @@
 
 DJIR_SDK::DataHandle::DataHandle()
 {
+//   pinMode(LED_BUILTIN, OUTPUT);
+
     _stopped = false;
     _input_position_ready_flag = false;
     _cmd_list = std::vector<std::vector<uint8_t>>();
@@ -16,9 +18,11 @@ DJIR_SDK::DataHandle::DataHandle()
     Can0.setBaudRate(1000000);
     Can0.setMaxMB(16);
     Can0.enableFIFO();
-    Can0.enableFIFOInterrupt();
+    // Can0.setFIFOFilter(;)
+    // Can0.enableFIFOInterrupt();
     Can0.mailboxStatus();
     // _rsps = std::vector<std::string>();
+    // tp.onReceive(myCallback); /* set callback */
 }
 
 void DJIR_SDK::DataHandle::start()
@@ -36,6 +40,8 @@ void DJIR_SDK::DataHandle::stop()
 //TODO: ADD CAN send
 void DJIR_SDK::DataHandle::add_cmd(std::vector<uint8_t> cmd)
 {
+    //digitalWrite(LED_BUILTIN, HIGH);
+
     // _rdcontent_lock.lock();
     _cmd_list.push_back(cmd);
     if (_cmd_list.size() > 10)
@@ -79,19 +85,22 @@ void DJIR_SDK::DataHandle::add_cmd(std::vector<uint8_t> cmd)
         send_buf[frame_num - 1].buf[j] = cmd[data_offset + j];
     }
 
-    for (int k = 0; k < frame_num; k++)
+    for (int k = 0; k < frame_num; k++) {
       Can0.write(send_buf[k]);
+
+    }
+
+    //digitalWrite(LED_BUILTIN, LOW);
+
 }
 
 bool DJIR_SDK::DataHandle::get_position(int16_t &yaw, int16_t &roll, int16_t &pitch, uint16_t timeout_ms)
 {
     // Wait data.
     // std::unique_lock<std::mutex> lk(_input_position_mutex);
+    uint32_t timeout = millis();
     while (!_input_position_ready_flag)
     {
-
-        uint32_t timeout = millis();
-        timeout = millis();
         this->run();
 
         // if (_input_position_cond_var.wait_for(
@@ -100,11 +109,13 @@ bool DJIR_SDK::DataHandle::get_position(int16_t &yaw, int16_t &roll, int16_t &pi
         // Reset data ready flag.
         if (millis() - timeout > timeout_ms)
         {
+            Serial.println("TIMEOUT");
             _input_position_ready_flag = false;
             // Unlock mutex.
             // lk.unlock();
             return false;
         }
+
 
         // }
     }
@@ -127,59 +138,67 @@ void DJIR_SDK::DataHandle::run()
     // while (!_stopped)
     if (Can0.readFIFO(frame))
     {
+
+        if (frame.id == 0x222) {
+            //digitalWrite(LED_BUILTIN, HIGH);
         // auto frame = dev->get_tunnel()->pop_data_from_recv_queue();
-        for (size_t i = 0; i < frame.len; i++)
-        {
-            if (_step == 0)
+            for (size_t i = 0; i < frame.len; i++)
             {
-                if (frame.buf[i] == 0xAA)
+                if (_step == 0)
+                {
+                    if (frame.buf[i] == 0xAA)
+                    {
+                        _v1_pack_list.push_back(frame.buf[i]);
+                        _step = 1;
+                    }
+                }
+                else if (_step == 1)
+                {
+                    _pack_len = int(frame.buf[i]);
+                    _v1_pack_list.push_back(frame.buf[i]);
+                    _step = 2;
+                }
+                else if (_step == 2)
+                {
+                    _pack_len |= ((int(frame.buf[i]) & 0x3) << 8);
+                    _v1_pack_list.push_back(frame.buf[i]);
+                    _step = 3;
+                }
+                else if (_step == 3)
                 {
                     _v1_pack_list.push_back(frame.buf[i]);
-                    _step = 1;
-                }
-            }
-            else if (_step == 1)
-            {
-                _pack_len = int(frame.buf[i]);
-                _v1_pack_list.push_back(frame.buf[i]);
-                _step = 2;
-            }
-            else if (_step == 2)
-            {
-                _pack_len |= ((int(frame.buf[i]) & 0x3) << 8);
-                _v1_pack_list.push_back(frame.buf[i]);
-                _step = 3;
-            }
-            else if (_step == 3)
-            {
-                _v1_pack_list.push_back(frame.buf[i]);
-                if (_v1_pack_list.size() == 12)
-                {
-                    if (_check_head_crc(_v1_pack_list))
-                        _step = 4;
-                    else
+                    if (_v1_pack_list.size() == 12)
                     {
+                        if (_check_head_crc(_v1_pack_list))
+                            _step = 4;
+                        else
+                        {
+                            _step = 0;
+                            _v1_pack_list.clear();
+                        }
+                    }
+                }
+                else if (_step == 4)
+                {
+                    _v1_pack_list.push_back(frame.buf[i]);
+                    if (_v1_pack_list.size() == _pack_len)
+                    {
+
                         _step = 0;
+                        if (_check_pack_crc(_v1_pack_list)) 
+                            _process_cmd(_v1_pack_list);
+                        
                         _v1_pack_list.clear();
                     }
                 }
-            }
-            else if (_step == 4)
-            {
-                _v1_pack_list.push_back(frame.buf[i]);
-                if (_v1_pack_list.size() == _pack_len)
+                else
                 {
                     _step = 0;
-                    if (_check_pack_crc(_v1_pack_list))
-                        _process_cmd(_v1_pack_list);
                     _v1_pack_list.clear();
                 }
             }
-            else
-            {
-                _step = 0;
-                _v1_pack_list.clear();
-            }
+            //digitalWrite(LED_BUILTIN, LOW);
+
         }
 
         // std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -228,7 +247,7 @@ void DJIR_SDK::DataHandle::_process_cmd(std::vector<uint8_t> data)
         {
         case 0x000e:
         {
-            printf("get posControl request\n");
+            // Serial.printf("get posControl request\n");
             break;
         }
         case 0x020e:
@@ -241,9 +260,9 @@ void DJIR_SDK::DataHandle::_process_cmd(std::vector<uint8_t> data)
             //            if (data[13] == 0x02)
             //                std::cout << "The current angle is joint angle\n" << std::endl;
 
-            _yaw = *(int16_t *)&data.data()[14];
-            _roll = *(int16_t *)&data.data()[16];
-            _pitch = *(int16_t *)&data.data()[18];
+            _yaw = *(int16_t *)&data.data()[16];
+            _roll = *(int16_t *)&data.data()[18];
+            _pitch = *(int16_t *)&data.data()[20];
 
             //            std::cout << "yaw = " << _yaw << " roll = " << _roll << " pitch = " << _pitch << std::endl;
 
@@ -254,7 +273,7 @@ void DJIR_SDK::DataHandle::_process_cmd(std::vector<uint8_t> data)
         }
         default:
         {
-            printf("get unknown request\n");
+            Serial.printf("get unknown request\n");
             break;
         }
         }

@@ -57,6 +57,10 @@ bool DJIR_SDK::DJIRonin::move_to(int16_t yaw, int16_t roll, int16_t pitch, uint1
     uint8_t cmd_set = 0x0E;
     uint8_t cmd_id = 0x00;
     uint8_t time = (uint8_t)(time_ms/100);
+
+    //TODO: why....
+    _position_ctrl_byte = 1;
+
     std::vector<uint8_t> data_payload =
     {
         ((uint8_t*)&yaw)[0],((uint8_t*)&yaw)[1],
@@ -171,8 +175,12 @@ bool DJIR_SDK::DJIRonin::get_current_position(int16_t &yaw, int16_t &roll, int16
     // int ret = ((CANConnection*)_can_conn)->send_cmd(cmd);
     // if (ret > 0)
     // {
-        return ((DataHandle*)_pack_thread)->get_position(yaw, roll, pitch, 1000);;
+        return ((DataHandle*)_pack_thread)->get_position(yaw, roll, pitch, 10);
     // }
     // else
         // return false;
+}
+
+void DJIR_SDK::DJIRonin::update() {
+    ((DataHandle*)_pack_thread)->run();
 }

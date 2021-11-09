@@ -31,11 +31,11 @@ public:
     void add_cmd(std::vector<uint8_t> cmd);
 
     bool get_position(int16_t& yaw, int16_t& roll, int16_t& pitch, uint16_t timeout_ms);
+    void run();
 
 private:
-    FlexCAN_T4<CAN2, RX_SIZE_512, TX_SIZE_512> Can0;
+    FlexCAN_T4<CAN3, RX_SIZE_128, TX_SIZE_32> Can0;
 
-    void run();
     void _process_cmd(std::vector<uint8_t> data);
     bool _check_head_crc(std::vector<uint8_t> data);
     bool _check_pack_crc(std::vector<uint8_t> data);
