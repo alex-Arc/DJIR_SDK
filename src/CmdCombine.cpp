@@ -2,17 +2,17 @@
 #include "custom_crc16.h"
 #include "custom_crc32.h"
 
-DJIR_SDK::CmdCombine::CmdCombine()
+CmdCombine::CmdCombine()
 {
 
 }
 
-DJIR_SDK::CmdCombine::~CmdCombine()
+CmdCombine::~CmdCombine()
 {
 
 }
 
-std::vector<uint8_t> DJIR_SDK::CmdCombine::combine(uint8_t cmd_type, uint8_t cmd_set, uint8_t cmd_id, std::vector<uint8_t> data)
+std::vector<uint8_t> CmdCombine::combine(uint8_t cmd_type, uint8_t cmd_set, uint8_t cmd_id, std::vector<uint8_t> data)
 {
 /* DJI R SDK Protocol Description
  *
@@ -42,7 +42,8 @@ std::vector<uint8_t> DJIR_SDK::CmdCombine::combine(uint8_t cmd_type, uint8_t cmd
     int crc32_length = 4;
 
     uint16_t cmd_length = prefix_length + crc16_length + data_length + crc32_length;
-    auto seqnum = seq_num();
+    // auto seqnum = seq_num();
+    uint8_t seqnum[] = {0x22, 0x11};
 
 
     int i = 0;
@@ -85,7 +86,7 @@ std::vector<uint8_t> DJIR_SDK::CmdCombine::combine(uint8_t cmd_type, uint8_t cmd
     return cmd;
 }
 
-std::vector<uint8_t> DJIR_SDK::CmdCombine::seq_num()
+std::vector<uint8_t> CmdCombine::seq_num()
 {
     static uint16_t Seq_Init_Data = 0x2210;
     if (Seq_Init_Data >= 0xFFFD)

@@ -1,15 +1,17 @@
 #ifndef DJI_R_SDK_H
 #define DJI_R_SDK_H
 
-#include <stdlib.h>
-#include <stdint.h>
-#include <vector>
+#include <Arduino.h>
 
-#if (defined _WIN32 && defined RF62X_LIBRARY)
-#define API_EXPORT __declspec(dllexport)
-#else
-#define API_EXPORT
-#endif
+// #include <stdlib.h>
+// #include <stdint.h>
+// #include <vector>
+
+// #if (defined _WIN32 && defined RF62X_LIBRARY)
+// #define API_EXPORT __declspec(dllexport)
+// #else
+// #define API_EXPORT
+// #endif
 
 namespace DJIR_SDK {
 
@@ -42,7 +44,7 @@ enum class FocalControl {
 
 
 
-API_EXPORT class DJIRonin
+class DJIRonin
 {
 public:
     DJIRonin();
@@ -119,7 +121,7 @@ public:
     bool get_current_position(int16_t& yaw, int16_t& roll, int16_t& pitch);
 
 private:
-    void* _can_conn;
+    // void* _can_conn;
     void* _pack_thread;
     uint8_t _position_ctrl_byte;
     uint8_t _speed_ctrl_byte;

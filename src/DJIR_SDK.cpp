@@ -1,19 +1,21 @@
+#include <Arduino.h>
+
 #include "DJIR_SDK.h"
 #include "Handle.h"
 #include "CmdCombine.h"
 
-#include "USBCAN_SDK.h"
-using namespace USBCAN_SDK;
+// #include <USBCAN_SDK.h>
+// using namespace USBCAN_SDK;
 
-enum FLAG : uint8_t {
-    BIT1 = 0x01,
-    BIT2 = 0x02,
-    BIT3 = 0x04,
-    BIT4 = 0x08,
-    BIT5 = 0x10,
-    BIT6 = 0x20,
-    BIT7 = 0x40
-};
+// enum FLAG : uint8_t {
+//     BIT1 = 0x01,
+//     BIT2 = 0x02,
+//     BIT3 = 0x04,
+//     BIT4 = 0x08,
+//     BIT5 = 0x10,
+//     BIT6 = 0x20,
+//     BIT7 = 0x40
+// };
 
 DJIR_SDK::DJIRonin::DJIRonin()
 {
@@ -32,16 +34,16 @@ DJIR_SDK::DJIRonin::~DJIRonin()
 
 bool DJIR_SDK::DJIRonin::connect()
 {
-    int send_id = 0x223;
-    int recv_id = 0x222;
+    // int send_id = 0x223;
+    // int recv_id = 0x222;
 
     // Connect to DJIR gimbal
-    _can_conn = new CANConnection(send_id, recv_id);
-    _pack_thread = new DataHandle(_can_conn);
+    // _can_conn = new CANConnection(send_id, recv_id);
+    _pack_thread = new DataHandle();
     ((DataHandle*)_pack_thread)->start();
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
-    return ((CANConnection*)_can_conn)->get_connection_status();
+    // std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    return true; //((CANConnection*)_can_conn)->get_connection_status();
 }
 
 bool DJIR_SDK::DJIRonin::disconnect()
@@ -64,11 +66,11 @@ bool DJIR_SDK::DJIRonin::move_to(int16_t yaw, int16_t roll, int16_t pitch, uint1
     };
     auto cmd = ((CmdCombine*)_cmd_cmb)->combine(cmd_type, cmd_set, cmd_id, data_payload);
     ((DataHandle*)_pack_thread)->add_cmd(cmd);
-    int ret = ((CANConnection*)_can_conn)->send_cmd(cmd);
-    if (ret > 0)
+    // int ret = ((CANConnection*)_can_conn)->send_cmd(cmd);
+    // if (ret > 0)
         return true;
-    else
-        return false;
+    // else
+        // return false;
 }
 
 bool DJIR_SDK::DJIRonin::set_inverted_axis(DJIR_SDK::AxisType axis, bool invert)
@@ -127,13 +129,13 @@ bool DJIR_SDK::DJIRonin::set_speed(uint16_t yaw, uint16_t roll, uint16_t pitch)
     auto cmd = ((CmdCombine*)_cmd_cmb)->combine(cmd_type, cmd_set, cmd_id, data_payload);
     ((DataHandle*)_pack_thread)->add_cmd(cmd);
 
-    int ret = ((CANConnection*)_can_conn)->send_cmd(cmd);
-    if (ret > 0)
-    {
+    // int ret = ((CANConnection*)_can_conn)->send_cmd(cmd);
+    // if (ret > 0)
+    // {
         return true;
-    }
-    else
-        return false;
+    // }
+    // else
+        // return false;
 }
 
 bool DJIR_SDK::DJIRonin::set_speed_mode(DJIR_SDK::SpeedControl speed_type, DJIR_SDK::FocalControl focal_type)
@@ -166,11 +168,11 @@ bool DJIR_SDK::DJIRonin::get_current_position(int16_t &yaw, int16_t &roll, int16
     auto cmd = ((CmdCombine*)_cmd_cmb)->combine(cmd_type, cmd_set, cmd_id, data_payload);
     ((DataHandle*)_pack_thread)->add_cmd(cmd);
 
-    int ret = ((CANConnection*)_can_conn)->send_cmd(cmd);
-    if (ret > 0)
-    {
+    // int ret = ((CANConnection*)_can_conn)->send_cmd(cmd);
+    // if (ret > 0)
+    // {
         return ((DataHandle*)_pack_thread)->get_position(yaw, roll, pitch, 1000);;
-    }
-    else
-        return false;
+    // }
+    // else
+        // return false;
 }

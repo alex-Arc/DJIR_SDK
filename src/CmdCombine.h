@@ -12,7 +12,6 @@
 #define API_EXPORT
 #endif
 
-namespace DJIR_SDK {
 
 API_EXPORT class CmdCombine
 {
@@ -29,6 +28,6 @@ private:
 
 };
 
-}
+
 
 #endif //CMD_COMBINE_H
