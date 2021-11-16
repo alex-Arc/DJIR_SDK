@@ -175,7 +175,7 @@ bool DJIR_SDK::DJIRonin::get_current_position(int16_t &yaw, int16_t &roll, int16
     // int ret = ((CANConnection*)_can_conn)->send_cmd(cmd);
     // if (ret > 0)
     // {
-        return ((DataHandle*)_pack_thread)->get_position(yaw, roll, pitch, 10);
+        return ((DataHandle*)_pack_thread)->get_position(yaw, roll, pitch, 15);
     // }
     // else
         // return false;

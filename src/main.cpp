@@ -53,6 +53,10 @@ void setup()
 {
   Serial.begin(115200);
   delay(400);
+  if (CrashReport)
+  {
+    Serial.print(CrashReport);
+  }
   // start the Ethernet
   // Unlike the Arduino API (which you can still use), Ethernet uses
   // the Teensy's internal MAC address by default
@@ -104,59 +108,6 @@ void setup()
   // dji.set_move_mode(DJIR_SDK::MoveMode::ABSOLUTE_CONTROL);
 }
 
-// const uint8_t FRAME_LEN = 8;
-
-// void send_cmd(std::vector<uint8_t> cmd)
-// {
-//   //TODO: getpos its the same msg every time?
-//   int data_len = (int)cmd.size();
-//   int frame_num = 0;
-//   int full_frame_num = data_len / FRAME_LEN;
-//   int left_len = data_len % FRAME_LEN;
-
-//   if (left_len == 0)
-//     frame_num = full_frame_num;
-//   else
-//     frame_num = full_frame_num + 1;
-
-//   CAN_message_t *send_buf = new CAN_message_t[frame_num];
-
-//   int data_offset = 0;
-//   for (int i = 0; i < (int)(full_frame_num); i++)
-//   {
-//     send_buf[i].id = 0x223;
-//     send_buf[i].flags.extended = 0;
-//     send_buf[i].len = FRAME_LEN;
-
-//     for (int j = 0; j < FRAME_LEN; j++)
-//     {
-//       send_buf[i].buf[j] = cmd[data_offset + j];
-//     }
-//     data_offset += FRAME_LEN;
-//   }
-
-//   if (left_len > 0)
-//   {
-//     send_buf[frame_num - 1].id = 0x223;
-//     send_buf[frame_num - 1].flags.extended = 0;
-//     send_buf[frame_num - 1].len = left_len;
-
-//     for (int j = 0; j < left_len; j++)
-//       send_buf[frame_num - 1].buf[j] = cmd[data_offset + j];
-//   }
-
-//   CAN_message_t inMsg;
-//   inMsg.buf[0] = 1;
-
-//   for (int k = 0; k < frame_num; k++)
-//   {
-//     Can0.write(send_buf[k]);
-//     for (int l = 0; l < send_buf[k].len; l++)
-//       Serial.printf("0x%0X ", send_buf[k].buf[l]);
-//     Serial.println();
-//   }
-// }
-
 void loop(void)
 {
 
@@ -167,26 +118,27 @@ void loop(void)
   static int32_t timeout4 = millis();
   if (millis() - timeout4 > 15)
   {
+    // int32_t t = micros();
     if (dji.get_current_position(heading.yaw, heading.roll, heading.pitch))
     {
-      // Serial.println("got");
+    //   // t = micros() - t;
+    //   // Serial.println("got");
       // Serial.printf("Y %d, R %d, P %d\n", heading.yaw, heading.roll, heading.pitch);
-      Udp.beginPacket(IPAddress(172, 16, 3, 39), 7000);
+      Udp.beginPacket(IPAddress(172, 16, 3, 59), 7000);
       Udp.write(heading.array, 6);
       Udp.endPacket();
     }
+    // Serial.printf("get_current_position micro sec %d\n", t);
     // Serial.println("test");
     // dji.move_to(heading.yaw, heading.roll, heading.pitch, 100);
     timeout4 = millis();
   }
-
-  if (Udp.parsePacket())
-  {
-    Udp.read(target_heading.array, 6);
-    // Serial.printf("Y %d, R %d, P %d\n", heading.yaw, heading.roll, heading.pitch);
-    dji.move_to(target_heading.yaw, target_heading.roll, target_heading.pitch, 1);
-
-  }
+  // if (Udp.parsePacket())
+  // {
+  //   Udp.read(target_heading.array, 6);
+  //   // Serial.printf("Y %d, R %d, P %d\n", heading.yaw, heading.roll, heading.pitch);
+  //   // dji.move_to(target_heading.yaw, target_heading.roll, target_heading.pitch, 1);
+  // }
 
   // Serial.println("after delay");
 }

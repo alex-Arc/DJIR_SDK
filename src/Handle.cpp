@@ -16,11 +16,11 @@ DJIR_SDK::DataHandle::DataHandle()
     _cmd_list = std::vector<std::vector<uint8_t>>();
     Can0.begin();
     Can0.setBaudRate(1000000);
-    Can0.setMaxMB(16);
-    Can0.enableFIFO();
+    // Can0.setMaxMB(16);
+    // Can0.enableFIFO();
     // Can0.setFIFOFilter(;)
     // Can0.enableFIFOInterrupt();
-    Can0.mailboxStatus();
+    // Can0.mailboxStatus();
     // _rsps = std::vector<std::string>();
     // tp.onReceive(myCallback); /* set callback */
 }
@@ -59,7 +59,9 @@ void DJIR_SDK::DataHandle::add_cmd(std::vector<uint8_t> cmd)
     else
       frame_num = full_frame_num + 1;
 
-    CAN_message_t *send_buf = new CAN_message_t[frame_num];
+
+    CAN_message_t send_buf[frame_num];
+
 
     int data_offset = 0;
     for (int i = 0; i < (int)(full_frame_num); i++)
@@ -67,6 +69,10 @@ void DJIR_SDK::DataHandle::add_cmd(std::vector<uint8_t> cmd)
       send_buf[i].id = 0x223;
       send_buf[i].flags.extended = 0;
       send_buf[i].len = FRAME_LEN;
+
+        // __disable_irq();
+        // memcpy(send_buf[i].buf, &cmd[data_offset], FRAME_LEN);
+        // __enable_irq();
 
       for (int j = 0; j < FRAME_LEN; j++)
       {
@@ -80,16 +86,30 @@ void DJIR_SDK::DataHandle::add_cmd(std::vector<uint8_t> cmd)
       send_buf[frame_num - 1].id = 0x223;
       send_buf[frame_num - 1].flags.extended = 0;
       send_buf[frame_num - 1].len = left_len;
+        
+        // __disable_irq();
+        // memcpy(send_buf[frame_num - 1].buf, &cmd[data_offset], left_len);
+        // __enable_irq();
 
       for (int j = 0; j < left_len; j++)
         send_buf[frame_num - 1].buf[j] = cmd[data_offset + j];
     }
 
-    for (int k = 0; k < frame_num; k++) {
-      Can0.write(send_buf[k]);
+    int ret = 0;
 
+    __disable_irq();
+    for (int k = 0; k < frame_num; k++) 
+    {
+      send_buf[k].seq = 1;
+      ret = Can0.write(send_buf[k]);
     }
+    __enable_irq();
 
+    // if (ret == -1) {
+    //     Can0.mailboxStatus();
+
+    //     Serial.printf("Can0.write failed\n");
+    // }
     //digitalWrite(LED_BUILTIN, LOW);
 
 }
@@ -98,7 +118,7 @@ bool DJIR_SDK::DataHandle::get_position(int16_t &yaw, int16_t &roll, int16_t &pi
 {
     // Wait data.
     // std::unique_lock<std::mutex> lk(_input_position_mutex);
-    uint32_t timeout = millis();
+    uint32_t timeout = 10000;
     while (!_input_position_ready_flag)
     {
         this->run();
@@ -107,7 +127,7 @@ bool DJIR_SDK::DataHandle::get_position(int16_t &yaw, int16_t &roll, int16_t &pi
         //             lk, std::chrono::milliseconds(timeout_ms)) == std::cv_status::timeout)
         // {
         // Reset data ready flag.
-        if (millis() - timeout > timeout_ms)
+        if (timeout < 1)
         {
             Serial.println("TIMEOUT");
             _input_position_ready_flag = false;
@@ -115,7 +135,7 @@ bool DJIR_SDK::DataHandle::get_position(int16_t &yaw, int16_t &roll, int16_t &pi
             // lk.unlock();
             return false;
         }
-
+        timeout--;
 
         // }
     }
@@ -136,9 +156,13 @@ void DJIR_SDK::DataHandle::run()
     // std::string canid_str = "";
     // USBCAN_SDK::CANConnection* dev = (USBCAN_SDK::CANConnection*)_dev;
     // while (!_stopped)
-    if (Can0.readFIFO(frame))
-    {
+        __disable_irq();
+        int ret = Can0.read(frame);
+        __enable_irq();
 
+    if (ret)
+    {
+        // Serial.printf("ID:0x%0X \n", frame.id);
         if (frame.id == 0x222) {
             //digitalWrite(LED_BUILTIN, HIGH);
         // auto frame = dev->get_tunnel()->pop_data_from_recv_queue();
@@ -146,27 +170,32 @@ void DJIR_SDK::DataHandle::run()
             {
                 if (_step == 0)
                 {
+
                     if (frame.buf[i] == 0xAA)
                     {
-                        _v1_pack_list.push_back(frame.buf[i]);
+                        uint8_t tmp = frame.buf[i];
+                        _v1_pack_list.push_back(tmp);
                         _step = 1;
                     }
                 }
                 else if (_step == 1)
                 {
                     _pack_len = int(frame.buf[i]);
-                    _v1_pack_list.push_back(frame.buf[i]);
+                    uint8_t tmp = frame.buf[i];
+                    _v1_pack_list.push_back(tmp);
                     _step = 2;
                 }
                 else if (_step == 2)
                 {
                     _pack_len |= ((int(frame.buf[i]) & 0x3) << 8);
-                    _v1_pack_list.push_back(frame.buf[i]);
+                    uint8_t tmp = frame.buf[i];
+                    _v1_pack_list.push_back(tmp);
                     _step = 3;
                 }
                 else if (_step == 3)
                 {
-                    _v1_pack_list.push_back(frame.buf[i]);
+                    uint8_t tmp = frame.buf[i];
+                    _v1_pack_list.push_back(tmp);
                     if (_v1_pack_list.size() == 12)
                     {
                         if (_check_head_crc(_v1_pack_list))
@@ -180,7 +209,8 @@ void DJIR_SDK::DataHandle::run()
                 }
                 else if (_step == 4)
                 {
-                    _v1_pack_list.push_back(frame.buf[i]);
+                    uint8_t tmp = frame.buf[i];
+                    _v1_pack_list.push_back(tmp);
                     if (_v1_pack_list.size() == _pack_len)
                     {
 
